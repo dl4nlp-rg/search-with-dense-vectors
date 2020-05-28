@@ -1,3 +1,19 @@
+import collections
+
+def gpu_mem_restore(func):
+    "Reclaim GPU RAM if CUDA out of memory happened, or execution was interrupted"
+    
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except:
+            type, val, tb = sys.exc_info()
+            traceback.clear_frames(tb)
+            raise type(val).with_traceback(tb) from None
+
+    return wrapper
+
 def recall_at_k(qrel, ans, k=100):
     """Compute the recall@k given qrel, search outputs in the form of a dict and k."""
     n = 0
