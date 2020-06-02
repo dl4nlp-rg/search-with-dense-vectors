@@ -1,9 +1,10 @@
 import collections
 import functools
+import traceback
 
 def gpu_mem_restore(func):
     "Reclaim GPU RAM if CUDA out of memory happened, or execution was interrupted"
-    
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
