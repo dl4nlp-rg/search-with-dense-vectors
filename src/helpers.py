@@ -112,3 +112,16 @@ def load_doc2query(path):
         print('Loading doc2query, doc {}'.format(i))
 
   return collection
+
+def load_triple(path, max_i=None):
+    """Load triple tsv into python dict."""
+    triples = collections.defaultdict(set)
+    with open(path) as f:
+        for i, line in enumerate(f):
+            qid, pid, nid = line.rstrip().split('\t')
+            triples[i] = qid, pid, nid
+            if i % 100000 == 0:
+                print('Loading triple {}'.format(i))
+            if max_i != None and i > max_i:
+                break
+    return triples
