@@ -23,7 +23,8 @@ class TwoTower(pl.LightningModule):
                  shuffle=True,
                  batch_size_val = 5,
                  pretrained_model='bert-base-uncased',
-                 use_cuda=True
+                 use_cuda=True,
+                 nproc=None,
                  ):
         super(TwoTower, self).__init__()
 
@@ -59,7 +60,7 @@ class TwoTower(pl.LightningModule):
             self.n_workers = 0
         else:
             self.pin_mem = False
-            self.n_workers = nproc
+            self.n_workers = nproc if nproc != None else  0
 
         # Models
         self.query_encoder = Encoder(dim)
