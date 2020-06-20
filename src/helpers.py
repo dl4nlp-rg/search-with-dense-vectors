@@ -125,3 +125,26 @@ def load_triple(path, max_i=None):
             if max_i != None and i > max_i:
                 break
     return triples
+
+def load_top1000_dev(path):
+    """Load top1000dev."""
+    queries = {}
+    with open(path) as f:
+        for i, line in enumerate(f):
+            qid, pid, _, _ = line.rstrip().split('\t')
+            if qid in queries.keys():
+                queries[qid].append(pid)
+            else:
+                queries[qid] = [pid]
+            if i % 1000000 == 0:
+                print('Loading top1000, doc {}'.format(i))
+    return queries
+
+def correct_docids(doc_ids):
+    """Correct pytorch confusion with dataloaders and lists."""
+    batch_size = len(doc_ids[0])
+    doc_ids_correct = []
+    for idx in range(batch_size):
+        doc_id_idx = [int(doc_id[idx]) for doc_id in doc_ids]
+        doc_ids_correct.append(doc_id_idx)
+    return doc_ids_correct
