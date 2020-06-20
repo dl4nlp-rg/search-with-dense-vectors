@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from transformers import BertTokenizer
+import msmarco_eval
 
 class TwoTower(pl.LightningModule):
     """Two tower model for document retrieval using query and document."""
