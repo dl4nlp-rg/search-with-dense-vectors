@@ -21,7 +21,8 @@ class TwoTower(pl.LightningModule):
                  epochs = None,
                  max_length=32,
                  shuffle=True,
-                 batch_size_val = 5
+                 batch_size_val = 5,
+                 pretrained_model='bert-base-uncased'
                  ):
         super(TwoTower, self).__init__()
 
