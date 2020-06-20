@@ -8,18 +8,18 @@ import pytorch_lightning as pl
 class TwoTower(pl.LightningModule):
     """Two tower model for document retrieval using query and document."""
     def __init__(self,
+                 queries_train_path,
+                 queries_dev_path,
+                 docs_path,
+                 triples_path,
+                 top1000_path,
+                 qrels_dev_path,
                  learning_rate=1e-3,
                  batch_size=32,
                  dim=128,
                  epochs = None,
                  max_length=32,
                  shuffle=True,
-                 queries_train_path = queries_train_path,
-                 queries_dev_path = queries_dev_path,
-                 docs_path = doc2queries_path,
-                 triples_path = triples_path,
-                 top1000_dev_path = top1000_path,
-                 qrels_dev_path = qrels_dev_path,
                  batch_size_val = 5
                  ):
         super(TwoTower, self).__init__()
