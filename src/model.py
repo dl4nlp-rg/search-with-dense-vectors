@@ -22,7 +22,8 @@ class TwoTower(pl.LightningModule):
                  max_length=32,
                  shuffle=True,
                  batch_size_val = 5,
-                 pretrained_model='bert-base-uncased'
+                 pretrained_model='bert-base-uncased',
+                 use_cuda=True
                  ):
         super(TwoTower, self).__init__()
 
