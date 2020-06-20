@@ -4,6 +4,7 @@ from modules import *
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
+from transformers import BertTokenizer
 
 class TwoTower(pl.LightningModule):
     """Two tower model for document retrieval using query and document."""
