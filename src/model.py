@@ -27,6 +27,7 @@ class TwoTower(pl.LightningModule):
                  pretrained_model='bert-base-uncased',
                  use_cuda=True,
                  nproc=None,
+                 max_val=100,
                  ):
         super(TwoTower, self).__init__()
 
@@ -35,7 +36,8 @@ class TwoTower(pl.LightningModule):
         self.queries_dev = load_queries(queries_dev_path)
         self.docs_queries = load_doc2query(docs_path)
         self.triples = load_triple(triples_path, 10_000)
-        self.queries_top1000 = load_top1000_dev(top1000_path)
+        queries_top1000 = load_top1000_dev(top1000_path, max_val)
+        self.queries_top1000 = {qid:docids for qid, docids in queries_top1000.items() if len(docids) == 1000}
         qrels = load_qrels(qrels_dev_path)
         self.qrels = {int(qid):docids for qid,docids in qrels.items()}
 

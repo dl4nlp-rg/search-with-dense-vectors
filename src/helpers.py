@@ -126,7 +126,7 @@ def load_triple(path, max_i=None):
                 break
     return triples
 
-def load_top1000_dev(path):
+def load_top1000_dev(path, k=None):
     """Load top1000dev."""
     queries = {}
     with open(path) as f:
@@ -138,6 +138,8 @@ def load_top1000_dev(path):
                 queries[qid] = [pid]
             if i % 1000000 == 0:
                 print('Loading top1000, doc {}'.format(i))
+            if (k != None) and (i >= k):
+                break
     return queries
 
 def correct_docids(doc_ids):
