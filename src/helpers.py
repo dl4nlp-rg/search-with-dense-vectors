@@ -4,9 +4,9 @@ import traceback
 import sys
 from itertools import islice
 
-def take(n, iterable):
+def take_dict(n, iterable):
     "Return first n items of the iterable as a list"
-    return list(islice(iterable, n))
+    return dict(islice(iterable, n))
 
 def gpu_mem_restore(func):
     "Reclaim GPU RAM if CUDA out of memory happened, or execution was interrupted"
@@ -145,7 +145,7 @@ def load_top1000_dev(path, k=None):
                 print('Loading top1000, doc {}'.format(i))
     queries = {qid:docids for qid, docids in queries.items() if len(docids) == 1000}
     if k != None:
-        queries = take(k, queries.items())
+        queries = take_dict(k, queries.items())
     return queries
 
 def correct_docids(doc_ids):
