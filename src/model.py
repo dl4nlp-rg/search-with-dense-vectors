@@ -174,7 +174,7 @@ class TwoTower(pl.LightningModule):
 
         if prefix == 'train':
             loss, _, _ = self(batch)
-            log = {'loss': loss}
+            log = {'train_loss': loss}
 
             return {'loss': loss, 'log': log, 'progress_bar': log}
 
@@ -207,7 +207,7 @@ class TwoTower(pl.LightningModule):
         if prefix == 'train':
           loss_mean = torch.mean(torch.tensor([out["loss"] for out in outputs]))
           log = {
-            'loss': loss_mean
+            'train_loss': loss_mean
             }
 
         if prefix == 'val':
