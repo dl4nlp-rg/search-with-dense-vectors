@@ -41,7 +41,7 @@ class TwoTower(pl.LightningModule):
         self.qrels = {int(qid):docids for qid,docids in qrels.items()}
 
         self.embedding_dim = dim
-        self.vectors = [] 
+        self.vectors = []
 
         # Configuration
         self.learning_rate = learning_rate
@@ -70,23 +70,23 @@ class TwoTower(pl.LightningModule):
         self.doc_encoder = Encoder(dim)
 
     def prepare_data(self):
-        
+
         self.train_data = MyDataset(
                 triples = self.triples,
                 queries = self.queries_train,
                 docs = self.docs_queries,
                 max_length = self.max_length,
                 tokenizer=self.tokenizer)
-        
+
         self.valid_data = ValDataset(
                 queries = self.queries_dev,
                 docs = self.docs_queries,
                 tokenizer = self.tokenizer,
                 max_length = self.max_length,
                 queries_1000 = self. queries_top1000)
-    
-    
-        
+
+
+
 
     @gpu_mem_restore
     def train_dataloader(self):
@@ -99,7 +99,7 @@ class TwoTower(pl.LightningModule):
         return DataLoader(self.valid_data, batch_size=self.batch_size_val,
                           shuffle=False, num_workers=self.n_workers,
                           pin_memory=self.pin_mem)
-    
+
     def configure_optimizers(self):
         optimizer = self.optimizer(
             [e for e in self.parameters() if e.requires_grad],
@@ -128,20 +128,20 @@ class TwoTower(pl.LightningModule):
     def forward(self,batch):
         if self.training:
           q_tok, q_mask, q_type, p_tok, p_mask, p_type, n_tok, n_mask, n_type, query, doc_pos, doc_neg = batch
-          
+
           query_embedding = self.query_encoder(q_tok.squeeze(-2),q_mask.squeeze(-2),q_type.squeeze(-2))
           p_doc_embedding = self.doc_encoder(p_tok.squeeze(-2),p_mask.squeeze(-2),p_type.squeeze(-2))
           n_doc_embedding = self.doc_encoder(n_tok.squeeze(-2),n_mask.squeeze(-2),n_type.squeeze(-2))
-          
-          loss, sim_pos, sim_neg = self.loss(query_embedding, p_doc_embedding, n_doc_embedding) 
-          
+
+          loss, sim_pos, sim_neg = self.loss(query_embedding, p_doc_embedding, n_doc_embedding)
+
           return loss.mean(), sim_pos, sim_neg
 
         else:
           qrel = {}
           q_tok, q_mask, q_type, docs_tok, docs_mask, docs_type, qid, doc_ids = batch
-          
-          #Corrige as dimensões dos elementos. 
+
+          #Corrige as dimensões dos elementos.
           docs_tok = docs_tok.view((-1,self.max_length))
           docs_mask = docs_mask.view((-1,self.max_length))
           docs_type = docs_type.view((-1,self.max_length))
@@ -149,20 +149,20 @@ class TwoTower(pl.LightningModule):
           q_mask = q_mask.squeeze(-2)
           q_type = q_type.squeeze(-2)
           doc_ids = torch.tensor(correct_docids(doc_ids)) #Corrige a ordem dos doc_ids
-          
+
           query_embedding = self.query_encoder(q_tok,q_mask,q_type)
-          
+
           doc_embedding = self.doc_encoder(docs_tok,docs_mask,docs_type)
           doc_embedding = doc_embedding.view((self.batch_size_val,-1,self.embedding_dim))
-          
+
           scores = self.similarity(query_embedding.unsqueeze(1), doc_embedding)
-          
+
           _, indices = torch.sort(scores)
 
           doc_ids_sorted = []
           for i, doc_id in enumerate(doc_ids):
             doc_ids_sorted.append(doc_id[indices[i]].tolist())
-          
+
           qrel = {}
           for i, doc_ids in enumerate(doc_ids_sorted):
             qrel[int(qid[i])] = doc_ids
@@ -174,7 +174,8 @@ class TwoTower(pl.LightningModule):
         if prefix == 'train':
             loss, _, _ = self(batch)
             log = {f'{prefix}_loss': loss}
-            return {'loss': loss, 'log': log,}
+
+            return {'loss': loss, 'log': log, 'progress_bar': log}
 
         elif(prefix=='val'):
             qrel_pred = self(batch)
@@ -184,6 +185,7 @@ class TwoTower(pl.LightningModule):
             n_queries = mrr_dict['QueriesRanked']
 
             log = {f'{prefix}_mrr': mrr}
+
             return {'mrr': mrr, 'log': log}
 
     def training_step(self, batch, batch_idx):
@@ -195,7 +197,7 @@ class TwoTower(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         return self._step("test", batch, batch_idx)
 
-    def _epoch_end(self, prefix, outputs):   
+    def _epoch_end(self, prefix, outputs):
         if not outputs:
             return {}
         acc_mean = 0
@@ -205,14 +207,13 @@ class TwoTower(pl.LightningModule):
           loss_mean = torch.mean(torch.tensor([out["loss"] for out in outputs]))
           log = {
             f'{prefix}_loss': loss_mean
-            } 
+            }
+
         if prefix == 'val':
-          mrr_mean = torch.mean(torch.tensor([out["mrr"] for out in outputs], dtype=torch.float)) 
+          mrr_mean = torch.mean(torch.tensor([out["mrr"] for out in outputs], dtype=torch.float))
           log = {
             f'{prefix}_mrr': mrr_mean,
-            } 
-        
-
+            }
 
         return {'progress_bar': log, 'log': log}
 
@@ -221,7 +222,7 @@ class TwoTower(pl.LightningModule):
 
     def get_doc_encoder(self):
         return self.doc_encoder
-    
+
     def training_epoch_end(self, outputs):
         return self._epoch_end("train", outputs)
 
