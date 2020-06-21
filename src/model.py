@@ -28,6 +28,7 @@ class TwoTower(pl.LightningModule):
                  use_cuda=True,
                  nproc=None,
                  max_val=100,
+                 max_train=100_000,
                  ):
         super(TwoTower, self).__init__()
 
@@ -35,7 +36,7 @@ class TwoTower(pl.LightningModule):
         self.queries_train = load_queries(queries_train_path)
         self.queries_dev = load_queries(queries_dev_path)
         self.docs_queries = load_doc2query(docs_path)
-        self.triples = load_triple(triples_path, 10_000)
+        self.triples = load_triple(triples_path, max_train)
         self.queries_top1000 = load_top1000_dev(top1000_path, max_val)
         qrels = load_qrels(qrels_dev_path)
         self.qrels = {int(qid):docids for qid,docids in qrels.items()}
@@ -173,7 +174,7 @@ class TwoTower(pl.LightningModule):
 
         if prefix == 'train':
             loss, _, _ = self(batch)
-            log = {f'{prefix}_loss': loss}
+            log = {'loss': loss}
 
             return {'loss': loss, 'log': log, 'progress_bar': log}
 
@@ -182,9 +183,9 @@ class TwoTower(pl.LightningModule):
             mrr_dict = msmarco_eval.compute_metrics(self.qrels,qrel_pred)
 
             mrr = mrr_dict['MRR @10']
-            n_queries = mrr_dict['QueriesRanked']
+            # n_queries = mrr_dict['QueriesRanked']
 
-            log = {f'{prefix}_mrr': mrr}
+            log = {'mrr': mrr}
 
             return {'mrr': mrr, 'log': log}
 
@@ -206,13 +207,13 @@ class TwoTower(pl.LightningModule):
         if prefix == 'train':
           loss_mean = torch.mean(torch.tensor([out["loss"] for out in outputs]))
           log = {
-            f'{prefix}_loss': loss_mean
+            'loss': loss_mean
             }
 
         if prefix == 'val':
           mrr_mean = torch.mean(torch.tensor([out["mrr"] for out in outputs], dtype=torch.float))
           log = {
-            f'{prefix}_mrr': mrr_mean,
+            'mrr': mrr_mean,
             }
 
         return {'progress_bar': log, 'log': log}
