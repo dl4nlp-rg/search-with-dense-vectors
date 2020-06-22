@@ -4,15 +4,18 @@ from transformers import BertModel
 
 class CosineSimilarityLoss(nn.Module):
     """Loss based on cosine similarity for embeddings."""
-    def __init__(self, k=2):
+    def __init__(self, k=2, eps=1e-8):
         super(CosineSimilarityLoss, self).__init__()
-        self.sim = nn.CosineSimilarity(dim=1, eps=1e-08)
+        self.eps = eps
+        self.sim = nn.CosineSimilarity(dim=1, eps=self.eps)
         self.k = k
 
     def forward(self, q, d_pos, d_neg):
         sim_pos = self.sim(q, d_pos)
         sim_neg = self.sim(q, d_neg)
-        loss = -torch.log(torch.exp(sim_pos)/(torch.exp(sim_pos) + self.k*torch.exp(sim_neg)))
+        loss = -torch.log(self.eps +
+                torch.exp(sim_pos)/(torch.exp(sim_pos) + self.k*torch.exp(sim_neg))
+                )
         return  loss, sim_pos, sim_neg
 
 
