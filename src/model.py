@@ -39,7 +39,7 @@ class TwoTower(pl.LightningModule):
         self.triples = load_triple(triples_path, max_train)
         self.queries_top1000 = load_top1000_dev(top1000_path, max_val)
         qrels = load_qrels(qrels_dev_path)
-        self.qrels = {int(qid):docids for qid,docids in qrels.items()}
+        self.qrels = {int(qid): [int(e) for e in docids] for qid,docids in qrels.items()}
 
         self.embedding_dim = dim
         self.vectors = []
@@ -53,7 +53,7 @@ class TwoTower(pl.LightningModule):
         self.similarity = nn.CosineSimilarity(dim=-1, eps=1e-08)
         self.optimizer = torch.optim.Adam
         self.opt_params = {'lr': learning_rate, 'eps': 1e-08, 'betas': (0.9, 0.999)}
-        self.warmup_steps = 500
+        self.warmup_steps = 100
         self.training_steps = (epochs*len(self.triples))/batch_size if epochs != None else None
         self.tokenizer = BertTokenizer.from_pretrained(pretrained_model)
 
@@ -85,9 +85,6 @@ class TwoTower(pl.LightningModule):
                 tokenizer = self.tokenizer,
                 max_length = self.max_length,
                 queries_1000 = self. queries_top1000)
-
-
-
 
     @gpu_mem_restore
     def train_dataloader(self):
@@ -158,7 +155,7 @@ class TwoTower(pl.LightningModule):
 
           scores = self.similarity(query_embedding.unsqueeze(1), doc_embedding)
 
-          _, indices = torch.sort(scores)
+          _, indices = torch.sort(scores, descending=True)
 
           doc_ids_sorted = []
           for i, doc_id in enumerate(doc_ids):
@@ -183,7 +180,6 @@ class TwoTower(pl.LightningModule):
             mrr_dict = msmarco_eval.compute_metrics(self.qrels,qrel_pred)
 
             mrr = mrr_dict['MRR @10']
-            # n_queries = mrr_dict['QueriesRanked']
 
             log = {'mrr': mrr}
 
