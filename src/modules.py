@@ -20,7 +20,7 @@ class CosineSimilarityLoss(nn.Module):
 
 class InternalProductLoss(nn.Module):
     def __init__(self, k=1, eps=1e-8, dim=128):
-        super(CosineSimilarityLoss, self).__init__()
+        super(InternalProductLoss, self).__init__()
         self.eps = eps
         self.sim = nn.Linear(dim, dim, bias=False)
         self.k = k
