@@ -18,23 +18,6 @@ class CosineSimilarityLoss(nn.Module):
                 )
         return  loss, sim_pos, sim_neg
 
-class InternalProductLoss(nn.Module):
-    def __init__(self, k=1, eps=1e-8, dim=128):
-        super(InternalProductLoss, self).__init__()
-        self.eps = eps
-        self.sim = nn.Linear(dim, dim, bias=False)
-        self.k = k
-
-    def forward(self, q, d_pos, d_neg):
-        sim_pos = self.sim(q, d_pos)
-        sim_neg = self.sim(q, d_neg)
-        loss = -torch.log(self.eps +
-                torch.exp(sim_pos)/(torch.exp(sim_pos) + self.k*torch.exp(sim_neg))
-                )
-        return  loss, sim_pos, sim_neg
-
-
-
 class Encoder(nn.Module):
     """BERT based encoder with reduced dim at the end."""
     def __init__(self, dim, pretrained_model='bert-base-uncased'):
