@@ -28,6 +28,7 @@ class TwoTower(pl.LightningModule):
                  pretrained_model='bert-base-uncased',
                  max_val=100,
                  max_train=100_000,
+                 **kwargs
                  ):
         super(TwoTower, self).__init__()
 
@@ -217,11 +218,11 @@ class TwoTower(pl.LightningModule):
         parser.add_argument('--batch_size_val', type=int, default=5)
         parser.add_argument('--max_lenght', type=int, default=32)
         parser.add_argument('--shuffle', type=bool, default=True)
-        parser.add_argument('--queries_train_path', type=str)
-        parser.add_argument('--queries_dev_path', type=str)
-        parser.add_argument('--docs_path', type=str)
-        parser.add_argument('--triples_path', type=str)
-        parser.add_argument('--top1000_path', type=str)
-        parser.add_argument('--qrels_dev_path', type=str)
+        parser.add_argument('--queries_train_path', type=str, default='queries.train.tsv')
+        parser.add_argument('--queries_dev_path', type=str, default='queries.dev.small.tsv')
+        parser.add_argument('--docs_path', type=str, default='collection.tsv')
+        parser.add_argument('--triples_path', type=str, default='qidpidtriples.train.full.tsv')
+        parser.add_argument('--top1000_path', type=str, default='top1000.dev')
+        parser.add_argument('--qrels_dev_path', type=str, default='qrels.dev.small.tsv')
         parser.add_argument('--pretrained_model', type=str, default='bert-base-uncased')
         return parser
