@@ -9,7 +9,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser = TwoTower().add_model_specific_args(parser)
+    parser = TwoTower.add_model_specific_args(parser)
     parser = Trainer.add_argparse_args(parser)
     args = parser.parse_args()
 
