@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from model import TwoTower
+from pytorch_lightning import Trainer
 
 def main(args):
     trainer = Trainer.from_argparse_args(args)
