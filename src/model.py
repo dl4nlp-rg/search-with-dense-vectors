@@ -21,70 +21,85 @@ class TwoTower(pl.LightningModule):
                  batch_size=32,
                  dim=128,
                  epochs = None,
+                 warmup_steps = 50,
                  max_length=32,
                  shuffle=True,
                  batch_size_val = 5,
                  pretrained_model='bert-base-uncased',
-                 use_cuda=True,
-                 nproc=None,
                  max_val=100,
                  max_train=100_000,
                  ):
         super(TwoTower, self).__init__()
 
-        #Data
-        self.queries_train = load_queries(queries_train_path)
-        self.queries_dev = load_queries(queries_dev_path)
-        self.docs_queries = load_doc2query(docs_path)
-        self.triples = load_triple(triples_path, max_train)
-        self.queries_top1000 = load_top1000_dev(top1000_path, max_val)
-        qrels = load_qrels(qrels_dev_path)
-        self.qrels = {int(qid): [int(e) for e in docids] for qid,docids in qrels.items()}
-
-        self.embedding_dim = dim
-        self.vectors = []
+        # Data
+        self.queries_train_path = queries_train_path
+        self.queries_dev_path = queries_dev_path
+        self.docs_path = docs_path
+        self.triples_path = triples_path
+        self.top1000_path = top1000_path
+        self.qrels_dev_path = qrels_dev_path
+        self.max_train = max_train
+        self.max_val = max_val
 
         # Configuration
         self.learning_rate = learning_rate
         self.batch_size=batch_size
         self.batch_size_val = batch_size_val
         self.max_length = max_length
-        self.loss = CosineSimilarityLoss()
-        self.similarity = nn.CosineSimilarity(dim=-1, eps=1e-08)
-        self.optimizer = torch.optim.Adam
-        self.opt_params = {'lr': learning_rate, 'eps': 1e-08, 'betas': (0.9, 0.999)}
-        self.warmup_steps = 100
-        self.training_steps = (epochs*len(self.triples))/batch_size if epochs != None else None
-        self.tokenizer = BertTokenizer.from_pretrained(pretrained_model)
-
-
+        self.warmup_steps = warmup_steps
         self.shuffle=shuffle
-        if use_cuda:
-            self.pin_mem = True
-            self.n_workers = 0
-        else:
-            self.pin_mem = False
-            self.n_workers = nproc if nproc != None else  0
+        self.pin_mem = True
+        self.n_workers = 0
+        self.embedding_dim = dim
+        self.pretrained_model = pretrained_model
+        self.epochs = epochs
+
+    def setup(self, step):
+        # Optimizer
+        self.optimizer = torch.optim.Adam
+        self.opt_params = {'lr': self.learning_rate, 'eps': 1e-08, 'betas': (0.9, 0.999)}
 
         # Models
-        self.query_encoder = Encoder(dim)
-        self.doc_encoder = Encoder(dim)
+        self.query_encoder = Encoder(self.embedding_dim)
+        self.doc_encoder = Encoder(self.embedding_dim)
+
+        # Loss
+        self.loss_fn = CosineSimilarityLoss(k=1)
+        self.similarity = nn.CosineSimilarity(dim=1, eps=1e-08)
+
+        # Steps
+        self.training_steps = (self.epochs*self.len_triples)/self.batch_size if self.epochs != None else None
+
 
     def prepare_data(self):
+        # Tokenizer
+        self.tokenizer = BertTokenizer.from_pretrained(self.pretrained_model)
 
+        # Download data
+        queries_train = load_queries(self.queries_train_path)
+        queries_dev = load_queries(self.queries_dev_path)
+        docs_queries = load_doc2query(self.docs_path)
+        triples = load_triple(self.triples_path, self.max_train)
+        queries_top1000 = load_top1000_dev(self.top1000_path, self.max_val)
+        qrels = load_qrels(self.qrels_dev_path)
+        self.qrels = {int(qid): [int(e) for e in docids] for qid,docids in qrels.items()}
+        self.len_triples = len(triples)
+
+        # Train dataset
         self.train_data = MyDataset(
-                triples = self.triples,
-                queries = self.queries_train,
-                docs = self.docs_queries,
+                triples = triples,
+                queries = queries_train,
+                docs = docs_queries,
                 max_length = self.max_length,
                 tokenizer=self.tokenizer)
 
+        # Val dataset
         self.valid_data = ValDataset(
-                queries = self.queries_dev,
-                docs = self.docs_queries,
+                queries = queries_dev,
+                docs = docs_queries,
                 tokenizer = self.tokenizer,
                 max_length = self.max_length,
-                queries_1000 = self. queries_top1000)
+                queries_1000 = queries_top1000)
 
     @gpu_mem_restore
     def train_dataloader(self):
@@ -119,10 +134,11 @@ class TwoTower(pl.LightningModule):
                                                     self.training_steps - self.warmup_steps)))
                 for pg in optimizer.param_groups:
                     pg['lr'] = lr_scale * self.learning_rate
+
         # update params
         optimizer.step()
         optimizer.zero_grad()
-
+        
     def forward(self,batch):
         if self.training:
           q_tok, q_mask, q_type, p_tok, p_mask, p_type, n_tok, n_mask, n_type, query, doc_pos, doc_neg = batch
@@ -131,7 +147,7 @@ class TwoTower(pl.LightningModule):
           p_doc_embedding = self.doc_encoder(p_tok.squeeze(-2),p_mask.squeeze(-2),p_type.squeeze(-2))
           n_doc_embedding = self.doc_encoder(n_tok.squeeze(-2),n_mask.squeeze(-2),n_type.squeeze(-2))
 
-          loss, sim_pos, sim_neg = self.loss(query_embedding, p_doc_embedding, n_doc_embedding)
+          loss, sim_pos, sim_neg = self.loss_fn(query_embedding, p_doc_embedding, n_doc_embedding)
 
           return loss.mean(), sim_pos, sim_neg
 
@@ -167,51 +183,21 @@ class TwoTower(pl.LightningModule):
 
           return qrel
 
-    def _step(self, prefix, batch, batch_nb):
-
-        if prefix == 'train':
-            loss, _, _ = self(batch)
-            log = {'train_loss': loss}
-
-            return {'loss': loss, 'log': log, 'progress_bar': log}
-
-        elif(prefix=='val'):
-            qrel_pred = self(batch)
-            mrr_dict = msmarco_eval.compute_metrics(self.qrels,qrel_pred)
-
-            mrr = mrr_dict['MRR @10']
-
-            log = {'mrr': mrr}
-
-            return {'mrr': mrr, 'log': log}
-
     def training_step(self, batch, batch_idx):
-        return self._step("train", batch, batch_idx)
+        loss, _, _ = self(batch)
+        logs = {'loss': loss}
+        progress = {'train_loss': loss}
+        return {'loss': loss, 'log': logs, 'progress_bar': progress}
 
     def validation_step(self, batch, batch_idx):
-        return self._step("val", batch, batch_idx)
+        qrel_pred = self(batch)
+        mrr_dict = msmarco_eval.compute_metrics(self.qrels,qrel_pred)
+        mrr = mrr_dict['MRR @10']
+        return {'mrr': mrr}
 
-    def test_step(self, batch, batch_idx):
-        return self._step("test", batch, batch_idx)
-
-    def _epoch_end(self, prefix, outputs):
-        if not outputs:
-            return {}
-        acc_mean = 0
-        loss_mean = 0
-
-        if prefix == 'train':
-          loss_mean = torch.mean(torch.tensor([out["loss"] for out in outputs]))
-          log = {
-            'train_loss': loss_mean
-            }
-
-        if prefix == 'val':
-          mrr_mean = torch.mean(torch.tensor([out["mrr"] for out in outputs], dtype=torch.float))
-          log = {
-            'mrr': mrr_mean,
-            }
-
+    def validation_epoch_end(self, outputs):
+        mrr_mean = torch.mean(torch.tensor([out["mrr"] for out in outputs], dtype=torch.float))
+        log = {'mrr': mrr_mean,}
         return {'progress_bar': log, 'log': log}
 
     def get_query_encoder(self):
@@ -220,25 +206,22 @@ class TwoTower(pl.LightningModule):
     def get_doc_encoder(self):
         return self.doc_encoder
 
-    def training_epoch_end(self, outputs):
-        return self._epoch_end("train", outputs)
-
-    def validation_epoch_end(self, outputs):
-        return self._epoch_end("val", outputs)
-
-    def test_epoch_end(self, outputs):
-        return self._epoch_end("test", outputs)
-
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument('--learning_rate', type=int, default=1e-3)
-        parser.add_argument('--batch_size', type=int, default=64)
-        parser.add_argument('--dim', type=int, default=64)
+        parser.add_argument('--batch_size', type=int, default=32)
+        parser.add_argument('--dim', type=int, default=128)
         parser.add_argument('--epochs', type=int, default=None)
+        parser.add_argument('--warmup_steps', type=int, default=50)
+        parser.add_argument('--batch_size_val', type=int, default=5)
         parser.add_argument('--max_lenght', type=int, default=32)
         parser.add_argument('--shuffle', type=bool, default=True)
-        parser.add_argument('--queries-path', type=str)
-        parser.add_argument('--docs-path', type=str)
-        parser.add_argument('--triples-path', type=str)
+        parser.add_argument('--queries_train_path', type=str)
+        parser.add_argument('--queries_dev_path', type=str)
+        parser.add_argument('--docs_path', type=str)
+        parser.add_argument('--triples_path', type=str)
+        parser.add_argument('--top1000_path', type=str)
+        parser.add_argument('--qrels_dev_path', type=str)
+        parser.add_argument('--pretrained_model', type=str, default='bert-base-uncased')
         return parser
