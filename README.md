@@ -38,5 +38,6 @@ There's also a colab notebook showing the usage in `notebooks/train.ipynb` and `
 ## References
 
  - [doc2query](https://github.com/nyu-dl/dl4ir-doc2query)
+ - [msmarco](https://microsoft.github.io/msmarco/)
  - [two tower model article](https://arxiv.org/abs/2002.03932)
  - [training model article](https://arxiv.org/abs/2004.04906)
