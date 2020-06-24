@@ -226,4 +226,6 @@ class TwoTower(pl.LightningModule):
         parser.add_argument('--top1000_path', type=str, default='top1000.dev')
         parser.add_argument('--qrels_dev_path', type=str, default='qrels.dev.small.tsv')
         parser.add_argument('--pretrained_model', type=str, default='bert-base-uncased')
+        parser.add_argument('--max_train', type=int, default=100000)
+        parser.add_argument('--max_val', type=int, default=100)
         return parser
