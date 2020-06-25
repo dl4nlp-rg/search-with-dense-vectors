@@ -30,7 +30,7 @@ trainer.fit(model)
 Example of training using train script:
 
 ```
-   python src/train.py --gpus 1 --batch_size 32
+   python -m src.train --gpus 1 --batch_size 32
  ```
 
 There's also a colab notebook showing the usage in `notebooks/train.ipynb` and `notebooks/example.ipynb`.
