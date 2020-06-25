@@ -1,13 +1,13 @@
-from dataset import *
-from helpers import *
-from modules import *
+from .dataset import *
+from .helpers import *
+from .modules import *
+from . import msmarco_eval
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from transformers import BertTokenizer
 from argparse import ArgumentParser
-import msmarco_eval
 
 class TwoTower(pl.LightningModule):
     """Two tower model for document retrieval using query and document."""
